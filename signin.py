@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Flop 签到工具 - Technocore DID 自动化工具
+Flop 签到工具 v3.0 - 多节点版
+支持 technocore.chat 和 technochat.fun 等多个节点
 作者 DID: did:key:z6MkjtbMn9brcUduNuDNFuNEz91BAxm9oGfjuRGK1fBSQc4x
 """
 
@@ -10,10 +11,20 @@ import os
 import time
 from datetime import datetime
 
-# 配置
+# ================= 配置区域 =================
+# 默认使用官方服务器
+BASE_URL = "https://technocore.chat"
+# 备选节点: https://technochat.fun
+
+# 其他配置
 TECHNOCORE_DIR = r"D:\flop\technocore-did-starter-main\technocore-did-starter"
 IDENTITY_PATH = r"D:\flop\technocore-did-starter-main\technocore-did-starter\identity.pem"
 DID = "did:key:z6MkjtbMn9brcUduNuDNFuNEz91BAxm9oGfjuRGK1fBSQc4x"
+# ===========================================
+
+def get_base_url():
+    """获取当前配置的 BASE_URL"""
+    return BASE_URL
 
 def run_command(cmd, cwd=TECHNOCORE_DIR):
     """执行命令并返回结果"""
@@ -30,13 +41,17 @@ def run_command(cmd, cwd=TECHNOCORE_DIR):
     except Exception as e:
         return False, "", str(e)
 
-def sign_in(room="test", message=None):
+def sign_in(room="test", message=None, base_url=None):
     """签到到指定房间"""
+    if base_url is None:
+        base_url = get_base_url()
+    
     if message is None:
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         message = f"Flop 签到！✅ {timestamp} DID: {DID}"
     
-    cmd = f'python technocore_agent.py say {room} "{message}" --key {IDENTITY_PATH}'
+    cmd = f'python technocore_agent.py say {room} "{message}" --key {IDENTITY_PATH} --base-url {base_url}'
+    print(f"📤 连接到: {base_url}")
     print(f"📤 签到到房间: {room}")
     print(f"📝 消息: {message}")
     
@@ -48,9 +63,13 @@ def sign_in(room="test", message=None):
         print(f"❌ 签到失败: {stderr}")
         return False
 
-def read_room(room="test", limit=10):
+def read_room(room="test", limit=10, base_url=None):
     """读取房间最新消息"""
-    cmd = f'python technocore_agent.py read {room} --limit {limit}'
+    if base_url is None:
+        base_url = get_base_url()
+    
+    cmd = f'python technocore_agent.py read {room} --limit {limit} --base-url {base_url}'
+    print(f"📖 连接到: {base_url}")
     print(f"📖 读取房间: {room} (最近 {limit} 条)")
     
     success, stdout, stderr = run_command(cmd)
@@ -62,10 +81,14 @@ def read_room(room="test", limit=10):
         print(f"❌ 读取失败: {stderr}")
         return False
 
-def follow_room(room="test", since=None):
+def follow_room(room="test", since=None, base_url=None):
     """实时监听房间消息"""
+    if base_url is None:
+        base_url = get_base_url()
+    
     since_cmd = f"--since {since}" if since else ""
-    cmd = f'python technocore_agent.py read {room} --follow {since_cmd}'
+    cmd = f'python technocore_agent.py read {room} --follow {since_cmd} --base-url {base_url}'
+    print(f"👀 连接到: {base_url}")
     print(f"👀 实时监听房间: {room} (按 Ctrl+C 退出)")
     
     try:
@@ -80,9 +103,13 @@ def follow_room(room="test", since=None):
     except Exception as e:
         print(f"❌ 监听失败: {e}")
 
-def verify_proof(proof_file="flop-proof.json"):
+def verify_proof(proof_file="flop-proof.json", base_url=None):
     """验证贡献证明"""
-    cmd = f'python technocore_agent.py verify-proof {proof_file}'
+    if base_url is None:
+        base_url = get_base_url()
+    
+    cmd = f'python technocore_agent.py verify-proof {proof_file} --base-url {base_url}'
+    print(f"🔐 连接到: {base_url}")
     print(f"🔐 验证证明: {proof_file}")
     
     success, stdout, stderr = run_command(cmd)
@@ -96,23 +123,26 @@ def verify_proof(proof_file="flop-proof.json"):
 
 def show_menu():
     """显示主菜单"""
-    print("\n" + "="*50)
-    print("  Flop 签到工具 v2.0")
-    print(f"  DID: {DID}")
-    print("="*50)
+    print("\n" + "="*55)
+    print("  Flop 签到工具 v3.0 (多节点版)")
+    print(f"  🔗 当前节点: {get_base_url()}")
+    print(f"  🆔 DID: {DID}")
+    print("="*55)
     print("1. 📤 签到 (test 房间)")
     print("2. 📤 签到 (自定义房间)")
     print("3. 📖 读取消息")
     print("4. 👀 实时监听")
     print("5. 🔐 验证贡献证明")
     print("6. 📊 显示状态")
-    print("7. 🚪 退出")
-    print("="*50)
+    print("7. 🔄 切换节点")
+    print("8. 🚪 退出")
+    print("="*55)
 
 def show_status():
     """显示当前状态"""
     print("\n📊 当前状态")
     print(f"  DID: {DID}")
+    print(f"  当前节点: {get_base_url()}")
     print(f"  身份文件: {IDENTITY_PATH}")
     print(f"  Technocore 目录: {TECHNOCORE_DIR}")
     
@@ -129,11 +159,37 @@ def show_status():
     else:
         print("  证明文件: ❌ 未找到")
 
+def switch_node():
+    """切换节点"""
+    global BASE_URL
+    print("\n🔄 切换节点")
+    print("1. 官方节点: https://technocore.chat")
+    print("2. technochat.fun: https://technochat.fun")
+    print("3. 自定义节点")
+    
+    choice = input("请选择 (1-3): ").strip()
+    
+    if choice == "1":
+        BASE_URL = "https://technocore.chat"
+        print(f"✅ 已切换到: {BASE_URL}")
+    elif choice == "2":
+        BASE_URL = "https://technochat.fun"
+        print(f"✅ 已切换到: {BASE_URL}")
+    elif choice == "3":
+        custom_url = input("请输入自定义节点 URL (例如: https://example.com): ").strip()
+        if custom_url:
+            BASE_URL = custom_url.rstrip('/')
+            print(f"✅ 已切换到: {BASE_URL}")
+        else:
+            print("❌ URL 不能为空")
+    else:
+        print("❌ 无效选择")
+
 def main():
     """主程序"""
     while True:
         show_menu()
-        choice = input("\n请选择 (1-7): ").strip()
+        choice = input("\n请选择 (1-8): ").strip()
         
         if choice == "1":
             sign_in()
@@ -170,6 +226,10 @@ def main():
             input("按 Enter 继续...")
         
         elif choice == "7":
+            switch_node()
+            input("按 Enter 继续...")
+        
+        elif choice == "8":
             print("👋 再见！")
             break
         
