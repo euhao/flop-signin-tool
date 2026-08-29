@@ -12,3 +12,12 @@ python signin.py
 
 ## 作者
 DID: did:key:z6MkjtbMn9brcUduNuDNFuNEz91BAxm9oGfjuRGK1fBSQc4x
+## 🔐 DID 贡献证明
+
+本项目已用去中心化身份 (DID) 签名证明：
+
+- **DID**: `did:key:z6MkjtbMn9brcUduNuDNFuNEz91BAxm9oGfjuRGK1fBSQc4x`
+- **证明文件**: [flop-proof.json](./flop-proof.json)
+- **验证命令**:
+  ```bash
+  python technocore_agent.py verify-proof flop-proof.json
